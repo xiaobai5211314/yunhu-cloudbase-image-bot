@@ -1,7 +1,11 @@
+const PROMPT_REQUIRED_MESSAGE = '请发送要生成的图片描述';
+
 function parseDrawCommand(text) {
   if (typeof text !== 'string') {
     return {
-      ok: false
+      ok: false,
+      error: 'missing_prompt',
+      message: PROMPT_REQUIRED_MESSAGE
     };
   }
 
@@ -19,7 +23,8 @@ function parseDrawCommand(text) {
   if (!prompt) {
     return {
       ok: false,
-      error: 'prompt is required'
+      error: 'missing_prompt',
+      message: PROMPT_REQUIRED_MESSAGE
     };
   }
 
@@ -34,7 +39,8 @@ function parseImagePrompt(text, mode = 'all') {
   if (typeof text !== 'string') {
     return {
       ok: false,
-      error: 'missing_text'
+      error: 'missing_prompt',
+      message: PROMPT_REQUIRED_MESSAGE
     };
   }
 
@@ -43,7 +49,8 @@ function parseImagePrompt(text, mode = 'all') {
   if (!trimmed) {
     return {
       ok: false,
-      error: 'missing_text'
+      error: 'missing_prompt',
+      message: PROMPT_REQUIRED_MESSAGE
     };
   }
 
@@ -61,7 +68,8 @@ function parseImagePrompt(text, mode = 'all') {
   if (/^(\/draw|\/画图)\s*$/.test(trimmed)) {
     return {
       ok: false,
-      error: 'missing_text'
+      error: 'missing_prompt',
+      message: PROMPT_REQUIRED_MESSAGE
     };
   }
 
@@ -80,6 +88,7 @@ function parseImagePrompt(text, mode = 'all') {
 }
 
 module.exports = {
+  PROMPT_REQUIRED_MESSAGE,
   parseDrawCommand,
   parseImagePrompt
 };

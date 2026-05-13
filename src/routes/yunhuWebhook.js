@@ -3,7 +3,7 @@ const config = require('../config');
 const imageService = require('../services/imageService');
 const yunhuApi = require('../services/yunhuApi');
 const logger = require('../utils/logger');
-const { parseImagePrompt } = require('../utils/parseCommand');
+const { PROMPT_REQUIRED_MESSAGE, parseImagePrompt } = require('../utils/parseCommand');
 
 const router = express.Router();
 
@@ -139,21 +139,32 @@ router.post('/webhook', async (req, res) => {
     const payload = normalizeBody(req.body);
     const message = extractYunhuMessage(payload);
 
-    if (!message.text) {
-      return res.status(400).json({
-        ok: false,
-        error: 'missing_text',
-        detail: 'Yunhu message text field is TODO / 待核实. Check webhook raw body in logs.'
+    const parsedPrompt = parseImagePrompt(message.text, 'all');
+
+    if (!parsedPrompt.ok && parsedPrompt.error === 'missing_prompt') {
+      logger.info('Yunhu prompt is empty', {
+        recvId: message.chatId || undefined,
+        recvType: message.recvType
       });
-    }
 
-    const parsedPrompt = parseImagePrompt(message.text, config.yunhu.imageTriggerMode);
+      if (message.chatId) {
+        try {
+          await yunhuApi.sendText({
+            recvId: message.chatId,
+            recvType: message.recvType,
+            text: PROMPT_REQUIRED_MESSAGE
+          });
+        } catch (sendErr) {
+          logger.error('Yunhu prompt hint message failed', {
+            message: sendErr.message,
+            yunhuResponse: sendErr.yunhuResponse
+          });
+        }
+      }
 
-    if (!parsedPrompt.ok && parsedPrompt.error === 'missing_text') {
-      return res.status(400).json({
-        ok: false,
-        error: 'missing_text',
-        detail: 'Yunhu message text field is TODO / 待核实. Check webhook raw body in logs.'
+      return res.json({
+        ok: true,
+        message: PROMPT_REQUIRED_MESSAGE
       });
     }
 
@@ -179,7 +190,8 @@ router.post('/webhook', async (req, res) => {
     logger.info('Yunhu image prompt received', {
       recvId: message.chatId,
       recvType: message.recvType,
-      userId: message.userId || undefined
+      userId: message.userId || undefined,
+      prompt: parsedPrompt.prompt
     });
 
     const imageResult = await imageService.generateImage({
