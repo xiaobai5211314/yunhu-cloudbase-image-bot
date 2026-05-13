@@ -1,0 +1,29 @@
+{
+  "name": "yunhu-cloudbase-image-bot",
+  "version": "1.0.0",
+  "description": "Generic image generation API service with Yunhu webhook entry and CloudBase provider.",
+  "main": "src/server.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "yunhu",
+    "cloudbase",
+    "hunyuan-image",
+    "image-generation",
+    "express"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.16.0",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
