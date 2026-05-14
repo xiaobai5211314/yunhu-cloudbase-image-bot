@@ -50,6 +50,17 @@ function getFirstString(payload, paths) {
   return '';
 }
 
+function hasStringAtPath(payload, path) {
+  const value = path.split('.').reduce((current, key) => {
+    if (!current || typeof current !== 'object') {
+      return undefined;
+    }
+    return current[key];
+  }, payload);
+
+  return typeof value === 'string' && value.trim();
+}
+
 function listPayloadKeys(value, prefix = '') {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return [];
@@ -61,7 +72,29 @@ function listPayloadKeys(value, prefix = '') {
   });
 }
 
+function getYunhuRecipientFields(payload) {
+  const recvIdPaths = [
+    'recvId',
+    'targetId',
+    'groupId'
+  ];
+
+  const recvTypePaths = [
+    'recvType'
+  ];
+
+  const idField = recvIdPaths.some((path) => hasStringAtPath(payload, path)) ? 'recvId' : 'chatId';
+  const typeField = recvTypePaths.some((path) => hasStringAtPath(payload, path)) ? 'recvType' : (idField === 'recvId' ? 'recvType' : 'chatType');
+
+  return {
+    idField,
+    typeField
+  };
+}
+
 function extractYunhuMessage(payload) {
+  const recipientFields = getYunhuRecipientFields(payload);
+
   return {
     // TODO / 待核实: 云湖 webhook 最终消息文本字段需用真实请求体确认。
     text: getFirstString(payload, [
@@ -108,8 +141,24 @@ function extractYunhuMessage(payload) {
       'event.chat.chatType',
       'message.chatType',
       'chatType'
-    ]) || 'group'
+    ]) || 'group',
+    idField: recipientFields.idField,
+    typeField: recipientFields.typeField
   };
+}
+
+function getImageReference(imageResult) {
+  const firstImage = imageResult && Array.isArray(imageResult.images) ? imageResult.images[0] : null;
+
+  return {
+    imageUrl: imageResult && (imageResult.imageUrl || imageResult.url) || firstImage && (firstImage.url || firstImage.imageUrl) || '',
+    imageKey: imageResult && imageResult.imageKey || firstImage && firstImage.imageKey || ''
+  };
+}
+
+function buildImageFailureText(imageReference) {
+  const reference = imageReference.imageUrl || imageReference.imageKey || '图片已生成，但没有公网可访问链接';
+  return `图片生成成功，但图片直发失败：${reference}`;
 }
 
 function verifyYunhuWebhook(req) {
@@ -152,6 +201,8 @@ router.post('/webhook', async (req, res) => {
           await yunhuApi.sendText({
             recvId: message.chatId,
             recvType: message.recvType,
+            idField: message.idField,
+            typeField: message.typeField,
             text: PROMPT_REQUIRED_MESSAGE
           });
         } catch (sendErr) {
@@ -188,8 +239,8 @@ router.post('/webhook', async (req, res) => {
     }
 
     logger.info('Yunhu image prompt received', {
-      recvId: message.chatId,
-      recvType: message.recvType,
+      [message.idField]: message.chatId,
+      [message.typeField]: message.recvType,
       userId: message.userId || undefined,
       prompt: parsedPrompt.prompt
     });
@@ -204,19 +255,25 @@ router.post('/webhook', async (req, res) => {
     });
 
     let sendResult = null;
+    const imageReference = getImageReference(imageResult);
 
     if (config.yunhu.replyMode === 'text_url') {
       sendResult = await yunhuApi.sendText({
         recvId: message.chatId,
         recvType: message.recvType,
-        text: imageResult.imageUrl
+        idField: message.idField,
+        typeField: message.typeField,
+        text: imageReference.imageUrl || imageReference.imageKey
       });
     } else {
       try {
         sendResult = await yunhuApi.sendImageMessage({
           recvId: message.chatId,
           recvType: message.recvType,
-          imageUrl: imageResult.imageUrl
+          idField: message.idField,
+          typeField: message.typeField,
+          imageUrl: imageReference.imageUrl,
+          imageKey: imageReference.imageKey
         });
       } catch (sendErr) {
         logger.error('Yunhu image message failed', {
@@ -224,19 +281,20 @@ router.post('/webhook', async (req, res) => {
           yunhuResponse: sendErr.yunhuResponse
         });
 
-        if (config.yunhu.imageFallbackToText) {
-          sendResult = await yunhuApi.sendText({
-            recvId: message.chatId,
-            recvType: message.recvType,
-            text: imageResult.imageUrl
-          });
-        }
+        sendResult = await yunhuApi.sendText({
+          recvId: message.chatId,
+          recvType: message.recvType,
+          idField: message.idField,
+          typeField: message.typeField,
+          text: buildImageFailureText(imageReference)
+        });
       }
     }
 
     res.json({
       ok: true,
-      imageUrl: imageResult.imageUrl,
+      imageUrl: imageReference.imageUrl,
+      imageKey: imageReference.imageKey || undefined,
       replyMode: config.yunhu.replyMode,
       yunhu: sendResult
     });

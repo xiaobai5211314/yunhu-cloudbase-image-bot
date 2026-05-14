@@ -81,7 +81,7 @@ IMAGE_API_TOKEN=
 
 YUNHU_BOT_TOKEN=
 YUNHU_SEND_API=https://chat-go.jwzhd.com/open-apis/v1/bot/send
-YUNHU_UPLOAD_IMAGE_API=
+YUNHU_UPLOAD_IMAGE_API=https://chat-go.jwzhd.com/open-apis/v1/image/upload
 YUNHU_WEBHOOK_SECRET=
 YUNHU_IMAGE_TRIGGER_MODE=all
 YUNHU_REPLY_MODE=image
@@ -196,12 +196,19 @@ YUNHU_IMAGE_FALLBACK_TO_TEXT=false
 - webhook 中消息文本字段：`event.message.content.text`、`message.content.text`、`content.text`、`text` 等，待核实。
 - webhook 中 `recvId/chatId` 字段：`chatId`、`chat.id`、`conversationId`、`recvId`、`targetId`、`groupId`、`sender.id`、`event.chat.id` 等，待核实。
 - webhook 中 `userId` 字段：`event.sender.senderId`、`message.senderId`、`userId` 等，待核实。
-- 直接发送图片消息的 payload 字段：当前尝试 `recvId`、`recvType`、`contentType: "image"`、`content.imageUrl`，待核实。如果直接发图失败，请查看服务日志中的云湖 API 完整响应体。
+- 直接发送图片消息的 payload 字段：当前会按 webhook 字段来源选择 `recvId/recvType` 或 `chatId/chatType`，并发送 `contentType: "image"`。公网 `http/https` 图片使用 `content.imageUrl`；本地路径或 base64 图片会先调用 `YUNHU_UPLOAD_IMAGE_API`，再使用 `content.imageKey`。图片消息 payload 字段仍待核实，如果直接发图失败，请查看服务日志中的云湖 API 完整响应体。
 - `YUNHU_WEBHOOK_SECRET` 的签名头、签名算法和校验字段，待核实。
 
 ## 图片 URL 调试模式
 
-专门生图群默认直接发送图片消息，不再把长 URL 发到群里。`YUNHU_REPLY_MODE=text_url` 仅用于调试链路。云湖图片消息 payload 字段仍待核实，如果直接发图失败，服务会把云湖 API 响应体完整写入日志，方便调整字段。
+专门生图群默认直接发送图片消息。`YUNHU_REPLY_MODE=text_url` 仅用于调试链路。云湖图片消息 payload 字段仍待核实，如果直接发图失败，服务会把云湖 API 响应体完整写入日志，并回退发送文本：`图片生成成功，但图片直发失败：<图片URL或可访问链接>`。
+
+图片上传接口当前按以下约定实现：
+
+```text
+POST https://chat-go.jwzhd.com/open-apis/v1/image/upload?token=***
+multipart/form-data 字段名：image
+```
 
 ## 新增 provider
 

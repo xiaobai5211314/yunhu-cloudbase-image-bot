@@ -18,7 +18,7 @@ const config = {
   yunhu: {
     botToken: process.env.YUNHU_BOT_TOKEN || '',
     sendApi: process.env.YUNHU_SEND_API || 'https://chat-go.jwzhd.com/open-apis/v1/bot/send',
-    uploadImageApi: process.env.YUNHU_UPLOAD_IMAGE_API || '',
+    uploadImageApi: process.env.YUNHU_UPLOAD_IMAGE_API || 'https://chat-go.jwzhd.com/open-apis/v1/image/upload',
     webhookSecret: process.env.YUNHU_WEBHOOK_SECRET || '',
     imageTriggerMode: process.env.YUNHU_IMAGE_TRIGGER_MODE || 'all',
     replyMode: process.env.YUNHU_REPLY_MODE || 'image',
