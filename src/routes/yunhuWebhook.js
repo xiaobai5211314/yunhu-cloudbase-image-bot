@@ -161,6 +161,14 @@ function buildImageFailureText(imageReference) {
   return `图片生成成功，但图片直发失败：${reference}`;
 }
 
+function normalizeReplyMode(replyMode) {
+  if (replyMode === 'text') {
+    return 'text_url';
+  }
+
+  return replyMode || 'image';
+}
+
 function verifyYunhuWebhook(req) {
   if (!config.yunhu.webhookSecret) {
     return true;
@@ -255,9 +263,13 @@ router.post('/webhook', async (req, res) => {
     });
 
     let sendResult = null;
+    let fallbackResult = null;
+    let imageSendOk = false;
+    let fallbackTextOk = false;
     const imageReference = getImageReference(imageResult);
+    const replyMode = normalizeReplyMode(config.yunhu.replyMode);
 
-    if (config.yunhu.replyMode === 'text_url') {
+    if (replyMode === 'text_url') {
       sendResult = await yunhuApi.sendText({
         recvId: message.chatId,
         recvType: message.recvType,
@@ -265,6 +277,7 @@ router.post('/webhook', async (req, res) => {
         typeField: message.typeField,
         text: imageReference.imageUrl || imageReference.imageKey
       });
+      fallbackTextOk = true;
     } else {
       try {
         sendResult = await yunhuApi.sendImageMessage({
@@ -275,19 +288,28 @@ router.post('/webhook', async (req, res) => {
           imageUrl: imageReference.imageUrl,
           imageKey: imageReference.imageKey
         });
+        imageSendOk = true;
       } catch (sendErr) {
         logger.error('Yunhu image message failed', {
           message: sendErr.message,
           yunhuResponse: sendErr.yunhuResponse
         });
 
-        sendResult = await yunhuApi.sendText({
-          recvId: message.chatId,
-          recvType: message.recvType,
-          idField: message.idField,
-          typeField: message.typeField,
-          text: buildImageFailureText(imageReference)
-        });
+        try {
+          fallbackResult = await yunhuApi.sendText({
+            recvId: message.chatId,
+            recvType: message.recvType,
+            idField: message.idField,
+            typeField: message.typeField,
+            text: buildImageFailureText(imageReference)
+          });
+          fallbackTextOk = true;
+        } catch (fallbackErr) {
+          logger.error('Yunhu image fallback text failed', {
+            message: fallbackErr.message,
+            yunhuResponse: fallbackErr.yunhuResponse
+          });
+        }
       }
     }
 
@@ -295,8 +317,10 @@ router.post('/webhook', async (req, res) => {
       ok: true,
       imageUrl: imageReference.imageUrl,
       imageKey: imageReference.imageKey || undefined,
-      replyMode: config.yunhu.replyMode,
-      yunhu: sendResult
+      replyMode,
+      imageSendOk,
+      fallbackTextOk,
+      yunhu: sendResult || fallbackResult
     });
   } catch (err) {
     logger.error('Yunhu webhook failed', {

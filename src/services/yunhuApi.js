@@ -331,12 +331,34 @@ async function sendImageMessage({
   let finalImageKey = imageKey;
   const finalImageUrl = imageUrl;
   const hasHttpImageUrl = isHttpUrl(finalImageUrl);
+  let uploadedToYunhu = false;
 
-  if (!finalImageKey && finalImageUrl && !hasHttpImageUrl) {
-    const uploadResult = await uploadImage({
-      imageUrl: finalImageUrl
-    });
+  if (!finalImageKey && finalImageUrl) {
+    let uploadInput = {
+      imageUrl: finalImageUrl,
+      filename: 'generated.png'
+    };
+
+    if (hasHttpImageUrl) {
+      logger.info('Downloading image before Yunhu upload', {
+        imageUrlIsHttp: true,
+        filename: uploadInput.filename
+      });
+
+      const imageResponse = await axios.get(finalImageUrl, {
+        responseType: 'arraybuffer',
+        timeout: 60000
+      });
+
+      uploadInput = {
+        imageBuffer: Buffer.from(imageResponse.data),
+        filename: 'generated.png'
+      };
+    }
+
+    const uploadResult = await uploadImage(uploadInput);
     finalImageKey = uploadResult.imageKey;
+    uploadedToYunhu = true;
   }
 
   const payload = {
@@ -355,7 +377,8 @@ async function sendImageMessage({
     [recipient.recipientTypeField]: recipient.recipientType,
     contentType: payload.contentType,
     imageUrlIsHttp: hasHttpImageUrl,
-    hasImageKey: Boolean(finalImageKey)
+    hasImageKey: Boolean(finalImageKey),
+    uploadedToYunhu
   });
 
   return postYunhuPayload(payload);

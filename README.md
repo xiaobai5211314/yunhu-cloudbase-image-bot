@@ -178,6 +178,7 @@ YUNHU_IMAGE_FALLBACK_TO_TEXT=false
 
 - `YUNHU_REPLY_MODE=image`：直接发送图片消息，当前默认值。
 - `YUNHU_REPLY_MODE=text_url`：发送图片 URL 文本，仅用于调试。
+- `YUNHU_REPLY_MODE=text`：`text_url` 的别名。
 - `YUNHU_IMAGE_FALLBACK_TO_TEXT=true`：图片消息发送失败时回退发送 URL 文本。
 - `YUNHU_IMAGE_FALLBACK_TO_TEXT=false`：图片消息发送失败时只记录错误日志，不把 URL 发到群里，当前默认值。
 
@@ -196,7 +197,7 @@ YUNHU_IMAGE_FALLBACK_TO_TEXT=false
 - webhook 中消息文本字段：`event.message.content.text`、`message.content.text`、`content.text`、`text` 等，待核实。
 - webhook 中 `recvId/chatId` 字段：`chatId`、`chat.id`、`conversationId`、`recvId`、`targetId`、`groupId`、`sender.id`、`event.chat.id` 等，待核实。
 - webhook 中 `userId` 字段：`event.sender.senderId`、`message.senderId`、`userId` 等，待核实。
-- 直接发送图片消息的 payload 字段：当前会按 webhook 字段来源选择 `recvId/recvType` 或 `chatId/chatType`，并发送 `contentType: "image"`。公网 `http/https` 图片使用 `content.imageUrl`；本地路径或 base64 图片会先调用 `YUNHU_UPLOAD_IMAGE_API`，再使用 `content.imageKey`。图片消息 payload 字段仍待核实，如果直接发图失败，请查看服务日志中的云湖 API 完整响应体。
+- 直接发送图片消息的 payload 字段：当前会按 webhook 字段来源选择 `recvId/recvType` 或 `chatId/chatType`，并发送 `contentType: "image"`。公网 `http/https` 图片会先下载并调用 `YUNHU_UPLOAD_IMAGE_API` 上传成本平台 `imageKey`，本地路径或 base64 图片也会走上传，最终使用 `content.imageKey` 发图。图片消息 payload 字段仍待核实，如果直接发图失败，请查看服务日志中的云湖 API 完整响应体。
 - `YUNHU_WEBHOOK_SECRET` 的签名头、签名算法和校验字段，待核实。
 
 ## 图片 URL 调试模式
