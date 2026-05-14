@@ -30,11 +30,16 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            export NPM_CONFIG_CACHE="$HOME/.npm-cache"
+            mkdir -p "$NPM_CONFIG_CACHE"
+            npm config set cache "$NPM_CONFIG_CACHE" --location=user
+
             if [ -f package-lock.json ]; then
-              npm ci --omit=dev
+              npm ci --omit=dev --cache "$NPM_CONFIG_CACHE"
             else
-              npm install --omit=dev
+              npm install --omit=dev --cache "$NPM_CONFIG_CACHE"
             fi
+
             pm2 restart yunhu-cloudbase-image-bot || pm2 start npm --name yunhu-cloudbase-image-bot -- start
             pm2 save
             pm2 status
