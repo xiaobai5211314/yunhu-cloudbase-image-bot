@@ -69,4 +69,4 @@
 - 新增生图 Provider 时，需在 `src/providers/` 继承统一接口，并在 `imageService.js` 注册。
 
 ## 8. 相关文档
-- [README.md](file:///e:/OneDrive%20-%201301173082@stu.ahcme.edu.cn/OneDrive%20-%20stu.ahcme.edu.cn/%E5%B0%8F%E7%99%BD/%E7%A8%8B%E5%BA%8F/yunhushengtu/README.md)
+- [README.md](./README.md)
