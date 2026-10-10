@@ -269,3 +269,8 @@ curl -X POST http://127.0.0.1:8788/yunhu/webhook \
   -H "Content-Type: application/json" \
   -d '{"content":{"text":"hello"},"chat":{"id":"test-chat"}}'
 ```
+
+## 开发与协作规范
+
+详细架构设计、CloudBase SDK 约束与接口契约请参阅 [AGENTS.md](./AGENTS.md)。
+
